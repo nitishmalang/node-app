@@ -1,50 +1,35 @@
 pipeline {
     agent any
-
+    environment {
+        AWS_DEFAULT_REGION = 'us-west-2'
+    }
     stages {
-        stage('Install Dependencies') {
+        stage('Checkout') {
             steps {
-                script {
-                    // Ensure Node.js and npm are installed
-                    sh 'node -v'
-                    sh 'npm -v'
-                    // Install npm dependencies
-                    sh 'npm install'
-                }
-            }
-        }
-        stage('Run Tests') {
-            steps {
-                script {
-                    // Run tests
-                    sh 'npm test'
-                }
+                git branch: 'main', url: 'https://github.com/your-repo/your-app.git'
             }
         }
         stage('Build') {
             steps {
-                script {
-                    // Create a production build (if applicable)
-                    sh 'npm run build'
-                }
+                sh 'npm install'
+                sh 'npm run build'
             }
         }
         stage('Deploy') {
             steps {
-                script {
-                    // Trigger deployment (e.g., using AWS CodeDeploy)
+                withAWS(credentials: 'aws-credentials-id', region: 'us-west-2') {
                     sh 'aws deploy push --application-name your-app --s3-location s3://your-bucket/your-app.zip'
+                    sh 'aws deploy create-deployment --application-name your-app --s3-location bucket=your-bucket,key=your-app.zip,bundleType=zip --deployment-group-name your-deployment-group'
                 }
             }
         }
     }
-
     post {
         success {
-            echo 'Build and deployment successful.'
+            echo 'Build and deploy successful'
         }
         failure {
-            echo 'Build or deployment failed.'
+            echo 'Build or deploy failed'
         }
     }
 }
